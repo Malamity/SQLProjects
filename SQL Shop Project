@@ -1,0 +1,200 @@
+CREATE DATABASE dbBaza
+USE dbBaza
+
+--	TWORZENIE TABEL
+CREATE TABLE tPaymentType(
+	 [paymentTypeID] INT IDENTITY(1,1) PRIMARY KEY
+	,[paymentName] NVARCHAR(30) NOT NULL
+);
+
+CREATE TABLE tCategory(
+	 [categoryID] INT IDENTITY(1,1) PRIMARY KEY
+	,[categoryName] NVARCHAR(50) NOT NULL
+	,[categoryDesc] NVARCHAR(500) NULL
+);
+
+CREATE TABLE tProduct(
+	 [productID] BIGINT IDENTITY(1,1) PRIMARY KEY
+	,[categoryID] INT FOREIGN KEY REFERENCES tCategory(categoryID) 
+	 ON UPDATE CASCADE ON DELETE NO ACTION
+	,[productName] NVARCHAR(30) NOT NULL
+	,[productDesc] NVARCHAR(30) NULL
+	,[productNetPrice] MONEY CHECK(productNetPrice>0) NOT NULL
+	,[productPrice] AS (productNetPrice+productNetPrice*0.23)
+	,[productQuantity] INT CHECK(productQuantity>0) NOT NULL
+);
+
+CREATE TABLE tAddress(
+	 [addressID] BIGINT IDENTITY(1,1) PRIMARY KEY
+	,[addressCity] NVARCHAR(60) NOT NULL
+	,[addressStreet] NVARCHAR(60) NOT NULL
+	,[addressCountry] NVARCHAR(60) NOT NULL
+	,[addressPostCode] VARCHAR(12) NOT NULL
+	,[addressHouseNumber] INT NOT NULL
+	,[addressApartmentNumber] INT NULL
+);
+
+CREATE TABLE tEmployee(
+	 [employeeID] INT IDENTITY(1,1) PRIMARY KEY
+	,[employeeAddressID] BIGINT FOREIGN KEY REFERENCES tAddress(addressID)
+	 ON UPDATE CASCADE ON DELETE NO ACTION
+	,[employeeName] NVARCHAR(30) NOT NULL
+	,[employeeSurname] NVARCHAR(30) NOT NULL
+	,[employeeUsername] NVARCHAR(11) NOT NULL
+	,[employeeEmploymentDate] DATE NOT NULL
+	,[employeeDismissDate] DATE NULL 
+	,CONSTRAINT chk_date CHECK(IIF(employeeDismissDate IS NULL OR employeeDismissDate >= employeeEmploymentDate, 1, 0) = 1) 
+);
+
+CREATE TABLE tClient(
+	 [clientID] BIGINT IDENTITY(1,1) PRIMARY KEY
+	,[clientName] NVARCHAR(30) NOT NULL
+	,[clientSurname] NVARCHAR(30) NOT NULL
+	,[clientUsername] NVARCHAR(11) NULL
+	,[clientPhoneCode] VARCHAR(5) DEFAULT('+48') NOT NULL 
+	,[clientPhoneNumber] VARCHAR(9) NOT NULL
+	,[clientEmail] NVARCHAR(100) NOT NULL
+	,[clientCompanyName] NVARCHAR(30) NULL
+	,[clientNIP] VARCHAR(10) NULL
+	,[clientREGON] VARCHAR(14) NULL
+);
+
+CREATE TABLE tClientAddress(
+	 [clientID] BIGINT FOREIGN KEY REFERENCES tClient(clientID)
+	 ON UPDATE CASCADE ON DELETE NO ACTION
+	,[addressID] BIGINT FOREIGN KEY REFERENCES tAddress(addressID)
+	 ON UPDATE CASCADE ON DELETE NO ACTION
+	,PRIMARY KEY(clientID,addressID)
+);
+
+CREATE TABLE tOrder(
+	 [orderID] BIGINT IDENTITY(1,1) PRIMARY KEY
+	,[addressID] BIGINT FOREIGN KEY REFERENCES tAddress(addressID)
+	 ON UPDATE CASCADE ON DELETE NO ACTION
+	,[clientID] BIGINT FOREIGN KEY REFERENCES tClient(clientID)
+	 ON UPDATE CASCADE ON DELETE NO ACTION
+	,[orderDate] DATE NOT NULL
+	,[shipDate] DATE NULL
+	,[paid] BIT DEFAULT(0) NOT NULL
+	,[orderExecuted] BIT DEFAULT(0) NOT NULL
+	,CONSTRAINT chk_shipDate CHECK(IIF(shipDate IS NULL OR shipDate >= orderDate, 1, 0) = 1) 
+);
+
+CREATE TABLE tProductOrder(
+	  [productID] BIGINT FOREIGN KEY REFERENCES tProduct(productID) 
+	  ON UPDATE CASCADE ON DELETE NO ACTION
+	 ,[orderID] BIGINT FOREIGN KEY REFERENCES  tOrder(orderID)
+	  ON UPDATE CASCADE ON DELETE NO ACTION
+);
+
+CREATE TABLE tInvoice(
+	 [invoiceID] BIGINT IDENTITY(1,1) PRIMARY KEY
+	,[clientID] BIGINT FOREIGN KEY REFERENCES tClient(clientID)
+	,[employeeID] INT FOREIGN KEY REFERENCES tEmployee(employeeID)
+	,[orderID] BIGINT FOREIGN KEY REFERENCES tOrder(orderID)
+	,[paymentTypeID] INT FOREIGN KEY REFERENCES tPaymentType(paymentTypeID)
+	,[invoicePrice] MONEY CHECK(invoicePrice>0) NULL
+);
+
+--	PROCEDURY WIDOKI TRIGGERY
+
+--	FUNKCJA, tworząca nazwę użytkownika (11 znaków) z podanego wcześniej imienia (pierwsza litera imienia [wielka], druga litera imienia [mała], trzy pierwsze litery naziwska [małe] oraz sześć cyfr numeru telefonu [zaczynając od 3]
+--	TWORZENIE FUNKCJI fCreateUsername
+
+CREATE FUNCTION fCreateUsername(@name NVARCHAR(MAX), @surname NVARCHAR(MAX), @phoneNumber NVARCHAR(MAX))
+RETURNS NVARCHAR(11)
+AS
+BEGIN  
+RETURN (SELECT CONCAT(UPPER(SUBSTRING(TRIM(@name),1,1)),SUBSTRING(LOWER(TRIM(@name)),2,1),SUBSTRING(LOWER(TRIM(@surname)),1,3),SUBSTRING(@phoneNumber,1,6)))
+END
+
+
+--TRIGGER, który sprawdza czy podczas podawania danych do bazy klient wpiszę "clientUsername", jeśli nie wywoła funkcję tworzącą nazwę z imienia, nazwiska oraz numeru telefonu.
+--	TWORZENIE TRIGGERA changeUsername
+
+CREATE TRIGGER changeUsername
+ON tClient
+AFTER INSERT
+AS
+IF EXISTS (SELECT 1 FROM inserted WHERE clientUsername IS NULL)
+BEGIN
+UPDATE tClient
+SET    clientUsername = dbo.fCreateUsername(t2.clientName, t2.clientSurname, t2.clientPhoneNumber)
+FROM   tClient T1
+       INNER JOIN inserted T2
+         ON T1.clientID = T2.clientID
+WHERE T1.clientUsername IS NULL
+END
+
+
+--	WIDOK, który wyświetla id oraz nazwę użytkowników w bazie tClient, oraz informację kto stworzył własną nazwę a dla kogo została ona wygenerowana funkcją.
+--	TWORZENIE WIDOKU vCreatedUsername
+
+CREATE VIEW vCreatedUsername
+AS 
+SELECT clientID, clientUsername FROM tClient WHERE CASE WHEN clientUsername = CONCAT(UPPER(SUBSTRING(TRIM(clientName),1,1)),SUBSTRING(LOWER(TRIM(clientName)),2,1),SUBSTRING(LOWER(TRIM(clientSurname)),1,3),SUBSTRING(clientPhoneNumber,3,6)) THEN 1 ELSE 0 END = 0
+
+
+CREATE VIEW vEmployeeAddress
+AS
+SELECT e.employeeName, e.employeeSurname, a.addressCity FROM tEmployee e INNER JOIN tAddress a ON a.addressID=e.employeeAddressID 
+
+
+CREATE VIEW vProductCategoryPrice
+AS
+SELECT c.categoryID, p.productName, p.productPrice AS productPrice FROM tProduct p INNER JOIN tCategory c ON c.categoryID=p.categoryID
+
+SELECT * FROM vProductCategoryPrice
+
+
+CREATE VIEW vOrderedProducts
+AS
+SELECT p.productName, p.productPrice, c.clientSurname, a.addressCity, o.orderDate FROM tOrder o INNER JOIN tAddress a ON o.addressID=a.addressID INNER JOIN tClientAddress ca ON ca.addressID=a.addressID INNER JOIN tClient c ON ca.clientID=c.clientID INNER JOIN tProductOrder po ON po.orderID=o.orderID INNER JOIN tProduct p ON p.productID=po.productID
+
+
+--	SELECT * FROM vCreatedUsername	--	WYŚWIETLENIE WIDOKU
+
+
+--	PROCEDURA, mająca za zadanie dodawanie użytkowników do bazy tClient 
+--	TWORZENIE PROCEDURY pInsertTClient
+
+CREATE PROCEDURE pInsertTClient(
+@clientName			NVARCHAR(MAX) 
+,@clientSurname		NVARCHAR(MAX) 
+,@clientUsername	NVARCHAR(MAX) NULL
+,@clientPhoneCode	VARCHAR(MAX)  
+,@clientPhoneNumber	VARCHAR(MAX) 
+,@clientEmail		NVARCHAR(MAX) 
+,@clientCompanyName	NVARCHAR(MAX) NULL
+,@clientNIP			VARCHAR(MAX)  NULL
+,@clientRegon		VARCHAR(MAX)  NULL
+)
+AS
+INSERT INTO tClient VALUES (
+@clientName		
+,@clientSurname		
+,@clientUsername	
+,@clientPhoneCode
+,@clientPhoneNumber	
+,@clientEmail		
+,@clientCompanyName	
+,@clientNIP			
+,@clientRegon		
+)
+
+
+--	Dodawanie użytkowników procedurą pInsertTClient
+	/* 
+	
+		EXEC pInsertTClient
+		 @clientAddressID	= 
+		,@clientName		=
+		,@clientSurName		=
+		,@clientUsername	=
+		,@clientPhoneNumber	=
+		,@clientEmail		=
+		,@clientCompanyName	=
+		,@clientNIP			=
+		,@clientRegon		=
+	
+	*/
