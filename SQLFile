@@ -1,0 +1,248 @@
+-- phpMyAdmin SQL Dump
+-- version 5.1.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Czas generowania: 14 Gru 2021, 07:11
+-- Wersja serwera: 10.4.21-MariaDB
+-- Wersja PHP: 8.0.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Baza danych: `projekt`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `kategoria`
+--
+
+CREATE TABLE `kategoria` (
+  `id` int(11) NOT NULL,
+  `k_nazwa` text COLLATE utf8_polish_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_polish_ci;
+
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `produkt`
+--
+
+CREATE TABLE `produkt` (
+  `id` int(11) NOT NULL,
+  `nazwa` text COLLATE utf8_polish_ci NOT NULL,
+  `kategoria_id` int(11) NOT NULL,
+  `cena` decimal(7,2) NOT NULL,
+  `zdj` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `opis` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `procesor` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `ram` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `pamiec` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `grafika` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `ekran` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `wyswietlacz` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `system` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `opinie` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `ilosc` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_polish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `typ_konta`
+--
+
+CREATE TABLE `typ_konta` (
+  `id` int(11) NOT NULL,
+  `u_nazwa` text COLLATE utf8_polish_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_polish_ci;
+
+--
+-- Zrzut danych tabeli `typ_konta`
+--
+
+INSERT INTO `typ_konta` (`id`, `u_nazwa`) VALUES
+(1, 'user'),
+(99, 'admin');
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `user`
+--
+
+CREATE TABLE `user` (
+  `id` int(11) NOT NULL,
+  `zdj` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `mail` text COLLATE utf8_polish_ci NOT NULL,
+  `nick` text COLLATE utf8_polish_ci DEFAULT NULL,
+  `haslo` text COLLATE utf8_polish_ci NOT NULL,
+  `imie` text COLLATE utf8_polish_ci NOT NULL,
+  `nazwisko` text COLLATE utf8_polish_ci NOT NULL,
+  `typ_konta_id` int(11) NOT NULL,
+  `access` tinyint(1) NOT NULL,
+  `nr_tel` varchar(9) COLLATE utf8_polish_ci DEFAULT NULL,
+  `wojewodztwo` text COLLATE utf8_polish_ci NOT NULL,
+  `miasto` text COLLATE utf8_polish_ci NOT NULL,
+  `ulica` text COLLATE utf8_polish_ci NOT NULL,
+  `nr_domu` int(11) NOT NULL,
+  `nr_lokalu` int(11) DEFAULT NULL,
+  `kod_pocztowy` text COLLATE utf8_polish_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_polish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `zamowienia`
+--
+
+CREATE TABLE `zamowienia` (
+  `id_zam` int(11) NOT NULL,
+  `id_user` int(11) NOT NULL,
+  `data_zam` date NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_polish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktura tabeli dla tabeli `zamowienia_prod`
+--
+
+CREATE TABLE `zamowienia_prod` (
+  `id_zam_prod` int(11) NOT NULL,
+  `id_zam` int(11) NOT NULL,
+  `id_prod` int(11) NOT NULL,
+  `platnosc` text COLLATE utf8_polish_ci NOT NULL,
+  `dostawa` text COLLATE utf8_polish_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_polish_ci;
+
+--
+-- Indeksy dla zrzutów tabel
+--
+
+--
+-- Indeksy dla tabeli `kategoria`
+--
+ALTER TABLE `kategoria`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indeksy dla tabeli `produkt`
+--
+ALTER TABLE `produkt`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `kategoria_id` (`kategoria_id`),
+  ADD KEY `produkt_zdj_id` (`zdj`(1024));
+
+--
+-- Indeksy dla tabeli `typ_konta`
+--
+ALTER TABLE `typ_konta`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indeksy dla tabeli `user`
+--
+ALTER TABLE `user`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `typ_konta_id` (`typ_konta_id`);
+
+--
+-- Indeksy dla tabeli `zamowienia`
+--
+ALTER TABLE `zamowienia`
+  ADD PRIMARY KEY (`id_zam`),
+  ADD KEY `id_user` (`id_user`);
+
+--
+-- Indeksy dla tabeli `zamowienia_prod`
+--
+ALTER TABLE `zamowienia_prod`
+  ADD PRIMARY KEY (`id_zam_prod`),
+  ADD KEY `id_zam` (`id_zam`),
+  ADD KEY `id_prod` (`id_prod`);
+
+--
+-- AUTO_INCREMENT dla zrzuconych tabel
+--
+
+--
+-- AUTO_INCREMENT dla tabeli `kategoria`
+--
+ALTER TABLE `kategoria`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT dla tabeli `produkt`
+--
+ALTER TABLE `produkt`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+
+--
+-- AUTO_INCREMENT dla tabeli `typ_konta`
+--
+ALTER TABLE `typ_konta`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+
+--
+-- AUTO_INCREMENT dla tabeli `user`
+--
+ALTER TABLE `user`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT dla tabeli `zamowienia`
+--
+ALTER TABLE `zamowienia`
+  MODIFY `id_zam` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+
+--
+-- AUTO_INCREMENT dla tabeli `zamowienia_prod`
+--
+ALTER TABLE `zamowienia_prod`
+  MODIFY `id_zam_prod` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+
+--
+-- Ograniczenia dla zrzutów tabel
+--
+
+--
+-- Ograniczenia dla tabeli `produkt`
+--
+ALTER TABLE `produkt`
+  ADD CONSTRAINT `produkt_ibfk_1` FOREIGN KEY (`kategoria_id`) REFERENCES `kategoria` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ograniczenia dla tabeli `user`
+--
+ALTER TABLE `user`
+  ADD CONSTRAINT `user_ibfk_1` FOREIGN KEY (`typ_konta_id`) REFERENCES `typ_konta` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ograniczenia dla tabeli `zamowienia`
+--
+ALTER TABLE `zamowienia`
+  ADD CONSTRAINT `zamowienia_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Ograniczenia dla tabeli `zamowienia_prod`
+--
+ALTER TABLE `zamowienia_prod`
+  ADD CONSTRAINT `zamowienia_prod_ibfk_1` FOREIGN KEY (`id_zam`) REFERENCES `zamowienia` (`id_zam`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `zamowienia_prod_ibfk_2` FOREIGN KEY (`id_prod`) REFERENCES `produkt` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
